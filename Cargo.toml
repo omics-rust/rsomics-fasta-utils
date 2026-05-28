@@ -12,6 +12,11 @@ description = "FASTA utility toolkit — count, chroms, len, revcomp, rename, ta
 name = "rsomics-fasta-utils"
 path = "src/main.rs"
 
+
+[lib]
+name = "rsomics_fasta_utils"
+path = "src/lib.rs"
+doctest = false
 [dependencies]
 rsomics-common = { version = "0.6" }
 rsomics-help = { version = "0.3" }
