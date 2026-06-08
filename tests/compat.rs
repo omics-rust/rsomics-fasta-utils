@@ -38,6 +38,53 @@ fn run_bin(args: &[&str]) -> String {
     String::from_utf8(out.stdout).expect("utf-8")
 }
 
+fn golden(name: &str) -> String {
+    std::fs::read_to_string(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/golden")
+            .join(name),
+    )
+    .expect("golden")
+}
+
+// Goldens below were captured once from seqkit v2.9.0 so CI diffs ours-vs-golden
+// even where seqkit is absent. Same field-level comparisons as the live tests.
+
+#[test]
+fn count_matches_golden() {
+    let f = fixture();
+    let ours = run_bin(&["count", f.to_str().unwrap()]);
+    let stats = golden("small.seqkit.stats.tsv");
+    let seqkit_count: &str = stats.lines().nth(1).unwrap().split('\t').nth(3).unwrap();
+    assert_eq!(ours.trim(), seqkit_count, "record count mismatch");
+}
+
+#[test]
+fn head_matches_golden() {
+    let f = fixture();
+    let ours = run_bin(&["head", "-n", "2", f.to_str().unwrap()]);
+    let theirs = golden("small.seqkit.head2.fa");
+    let our_names: Vec<&str> = ours.lines().filter(|l| l.starts_with('>')).collect();
+    let their_names: Vec<&str> = theirs.lines().filter(|l| l.starts_with('>')).collect();
+    assert_eq!(our_names, their_names, "head names mismatch");
+}
+
+#[test]
+fn revcomp_matches_golden() {
+    let f = fixture();
+    let ours = run_bin(&["revcomp", f.to_str().unwrap()]);
+    let theirs = golden("small.seqkit.revcomp.fa");
+    let our_seqs: Vec<&str> = ours.lines().filter(|l| !l.starts_with('>')).collect();
+    let their_seqs: Vec<&str> = theirs.lines().filter(|l| !l.starts_with('>')).collect();
+    for (ours, theirs) in our_seqs.iter().zip(their_seqs.iter()) {
+        assert_eq!(
+            ours.to_uppercase(),
+            theirs.to_uppercase(),
+            "revcomp mismatch"
+        );
+    }
+}
+
 #[test]
 fn count_matches_seqkit() {
     if !seqkit_available() {
