@@ -207,9 +207,13 @@ enum Command {
     },
 }
 
-fn open_output(path: &str) -> Result<Box<dyn std::io::Write>> {
+fn open_output(path: &str, json: bool) -> Result<Box<dyn std::io::Write>> {
     if path == "-" {
-        Ok(Box::new(std::io::stdout().lock()))
+        if json {
+            Ok(Box::new(std::io::sink()))
+        } else {
+            Ok(Box::new(std::io::stdout().lock()))
+        }
     } else {
         Ok(Box::new(
             std::fs::File::create(path).map_err(RsomicsError::Io)?,
@@ -228,31 +232,36 @@ impl Tool for Cli {
 
     #[allow(clippy::too_many_lines)]
     fn execute(self) -> Result<()> {
+        let json = self.common.json;
         match self.command {
             Command::Chroms { input, output } => {
-                let mut out = open_output(&output)?;
+                let mut out = open_output(&output, json)?;
                 ops::chroms::fasta_chroms(&input, &mut out)?;
             }
             Command::Composition { input } => {
                 let c = ops::composition::fasta_composition(&input)?;
-                println!("A\t{}", c.a);
-                println!("C\t{}", c.c);
-                println!("G\t{}", c.g);
-                println!("T\t{}", c.t);
-                println!("N\t{}", c.n);
-                println!("other\t{}", c.other);
-                println!("total\t{}", c.total);
+                if !json {
+                    println!("A\t{}", c.a);
+                    println!("C\t{}", c.c);
+                    println!("G\t{}", c.g);
+                    println!("T\t{}", c.t);
+                    println!("N\t{}", c.n);
+                    println!("other\t{}", c.other);
+                    println!("total\t{}", c.total);
+                }
             }
             Command::Count { input } => {
                 let n = ops::count::count(&input)?;
-                println!("{n}");
+                if !json {
+                    println!("{n}");
+                }
             }
             Command::Dedup {
                 input,
                 by_name,
                 output,
             } => {
-                let mut out = open_output(&output)?;
+                let mut out = open_output(&output, json)?;
                 ops::dedup::dedup_fasta(&input, &mut out, by_name)?;
             }
             Command::Extract {
@@ -261,7 +270,7 @@ impl Tool for Cli {
                 exclude,
                 output,
             } => {
-                let mut out = open_output(&output)?;
+                let mut out = open_output(&output, json)?;
                 ops::extract::extract_fasta(&input, &list, &mut out, exclude)?;
             }
             Command::Filter {
@@ -270,11 +279,11 @@ impl Tool for Cli {
                 max_len,
                 output,
             } => {
-                let mut out = open_output(&output)?;
+                let mut out = open_output(&output, json)?;
                 ops::filter::filter(&input, min_len, max_len, &mut out)?;
             }
             Command::GcContent { input, output } => {
-                let mut out = open_output(&output)?;
+                let mut out = open_output(&output, json)?;
                 ops::gc_content::fasta_gc_content(&input, &mut out)?;
             }
             Command::Grep {
@@ -283,19 +292,19 @@ impl Tool for Cli {
                 invert_match,
                 output,
             } => {
-                let mut out = open_output(&output)?;
+                let mut out = open_output(&output, json)?;
                 ops::grep::grep(&input, &pattern, invert_match, &mut out)?;
             }
             Command::Head { input, num, output } => {
-                let mut out = open_output(&output)?;
+                let mut out = open_output(&output, json)?;
                 ops::head::head(&input, num, &mut out)?;
             }
             Command::Kmers { input, k, output } => {
-                let mut out = open_output(&output)?;
+                let mut out = open_output(&output, json)?;
                 ops::kmers::count_kmers(&input, &mut out, k)?;
             }
             Command::Len { input, tab, output } => {
-                let mut out = open_output(&output)?;
+                let mut out = open_output(&output, json)?;
                 ops::len::lengths(&input, tab, &mut out)?;
             }
             Command::Rename {
@@ -303,11 +312,11 @@ impl Tool for Cli {
                 prefix,
                 output,
             } => {
-                let mut out = open_output(&output)?;
+                let mut out = open_output(&output, json)?;
                 ops::rename::rename(&input, &prefix, &mut out)?;
             }
             Command::Revcomp { input, output } => {
-                let mut out = open_output(&output)?;
+                let mut out = open_output(&output, json)?;
                 ops::revcomp::revcomp(&input, &mut out)?;
             }
             Command::Sample {
@@ -316,7 +325,7 @@ impl Tool for Cli {
                 seed,
                 output,
             } => {
-                let mut out = open_output(&output)?;
+                let mut out = open_output(&output, json)?;
                 ops::sample::sample(&input, proportion, seed, &mut out)?;
             }
             Command::Shuffle {
@@ -324,7 +333,7 @@ impl Tool for Cli {
                 seed,
                 output,
             } => {
-                let mut out = open_output(&output)?;
+                let mut out = open_output(&output, json)?;
                 ops::shuffle::shuffle_fasta(&input, &mut out, seed)?;
             }
             Command::Sort {
@@ -340,7 +349,7 @@ impl Tool for Cli {
                 } else {
                     ops::sort::SortKey::Name
                 };
-                let mut out = open_output(&output)?;
+                let mut out = open_output(&output, json)?;
                 ops::sort::sort(&input, key, &mut out)?;
             }
             Command::Split {
@@ -352,11 +361,11 @@ impl Tool for Cli {
                 eprintln!("{n} files written");
             }
             Command::Tab { input, output } => {
-                let mut out = open_output(&output)?;
+                let mut out = open_output(&output, json)?;
                 ops::tab::fasta_to_tab(&input, &mut out)?;
             }
             Command::ToBed { input, output } => {
-                let mut out = open_output(&output)?;
+                let mut out = open_output(&output, json)?;
                 ops::to_bed::fasta_to_bed(&input, &mut out)?;
             }
             Command::ToFastq {
@@ -364,16 +373,16 @@ impl Tool for Cli {
                 qual_char,
                 output,
             } => {
-                let mut out = open_output(&output)?;
+                let mut out = open_output(&output, json)?;
                 ops::to_fastq::convert(&input, qual_char, &mut out)?;
             }
             Command::Unique { input, output } => {
-                let mut out = open_output(&output)?;
+                let mut out = open_output(&output, json)?;
                 let (total, unique) = ops::unique::unique_fasta(&input, &mut out)?;
                 eprintln!("{total} total, {unique} unique");
             }
             Command::Upper { input, output } => {
-                let mut out = open_output(&output)?;
+                let mut out = open_output(&output, json)?;
                 ops::upper::uppercase(&input, &mut out)?;
             }
             Command::Window {
@@ -382,7 +391,7 @@ impl Tool for Cli {
                 step,
                 output,
             } => {
-                let mut out = open_output(&output)?;
+                let mut out = open_output(&output, json)?;
                 ops::window::window_stats(&input, &mut out, window, step)?;
             }
             Command::Wrap {
@@ -390,7 +399,7 @@ impl Tool for Cli {
                 width,
                 output,
             } => {
-                let mut out = open_output(&output)?;
+                let mut out = open_output(&output, json)?;
                 ops::wrap::fasta_wrap(&input, &mut out, width)?;
             }
         }
