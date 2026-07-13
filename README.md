@@ -28,7 +28,10 @@ flags; most take a positional FASTA and write to `-o` (`-` = stdout).
 
 Independent Rust reimplementation of common FASTA operations offered by `seqkit`
 and `seqtk`. `count`, `head`, and `revcomp` are checked against `seqkit stats`,
-`seqkit head`, and `seqkit seq -rp` respectively; the remaining subcommands are
+`seqkit head`, and `seqkit seq -rp` respectively. `revcomp` is alphabet-aware
+like seqkit — the complement table is fixed from the first record, so an RNA file
+pairs A with U and a protein file is reversed without complementing. The
+remaining subcommands are
 self-tested for correctness rather than byte-compared to a specific upstream, so
 they are compatible in operation rather than guaranteed byte-identical (in
 particular `sample` / `shuffle` use their own RNG and will not reproduce

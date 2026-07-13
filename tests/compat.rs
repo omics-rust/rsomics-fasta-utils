@@ -86,6 +86,19 @@ fn revcomp_matches_golden() {
 }
 
 #[test]
+fn revcomp_rna_matches_golden() {
+    // An RNA file must complement A<->U, not A<->T; the DNA-only table used to
+    // manufacture spurious T bases. Byte-exact, no case folding.
+    let f = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/golden/rna.fa");
+    let ours = run_bin(&["revcomp", f.to_str().unwrap()]);
+    assert_eq!(
+        ours,
+        golden("rna.seqkit.revcomp.fa"),
+        "RNA revcomp mismatch"
+    );
+}
+
+#[test]
 fn count_matches_seqkit() {
     if !seqkit_available() {
         eprintln!("skipping: seqkit not found");
